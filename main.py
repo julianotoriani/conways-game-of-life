@@ -64,6 +64,7 @@ class Game:
         self.pause = False
         self.debug = False
         self.create_cell_at_cursor = False
+        self.delete_cell_at_cursor = False
         self.overlay = True
 
         self.grid = [[False for _ in range(GRID_SIZE_Y)] for _ in range(GRID_SIZE_X)]
@@ -144,10 +145,24 @@ class Game:
 
         return cell
 
+    def update_cell_at_cursor(self, alive: bool):
+        pos = pygame.mouse.get_pos()
+
+        x = pos[0] // CELL_SIZE
+        y = pos[1] // CELL_SIZE
+
+        if self.grid[x][y] != alive:
+            self.save_snapshot = True
+
+        self.grid[x][y] = alive
+
     def run(self):
         pygame.init()
 
-        self.spawn((50, 0), GOSPER_GLIDER_GUN_LAYOUT, convert_to_local=False)
+        self.pause = True
+        for x, y, _ in self.cells():
+            if x % 6 > 0 and y % 4 == 0 and 20 < y < GRID_SIZE_Y - 20:
+                self.grid[x][y] = True
 
         self.font = pygame.font.Font(pygame.font.get_default_font(), 18)
         self.screen = pygame.display.set_mode(self.screen_size)
@@ -162,12 +177,11 @@ class Game:
             if self.rewind:
                 self.step_back()
 
-            if self.create_cell_at_cursor:
-                pos = pygame.mouse.get_pos()
+            if self.delete_cell_at_cursor:
+                self.update_cell_at_cursor(False)
 
-                x = pos[0] // CELL_SIZE
-                y = pos[1] // CELL_SIZE
-                self.grid[x][y] = True
+            if self.create_cell_at_cursor:
+                self.update_cell_at_cursor(True)
 
             self.draw_grid()
 
@@ -230,8 +244,14 @@ class Game:
             if event.type == MOUSEBUTTONDOWN:
                 if event.button == 1:
                     self.create_cell_at_cursor = True
-            elif event.type == MOUSEBUTTONUP and event.button == 1:
-                self.create_cell_at_cursor = False
+                if event.button == 3:
+                    self.delete_cell_at_cursor = True
+
+            elif event.type == MOUSEBUTTONUP:
+                if event.button == 1:
+                    self.create_cell_at_cursor = False
+                if event.button == 3:
+                    self.delete_cell_at_cursor = False
 
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
